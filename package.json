@@ -1,0 +1,28 @@
+{
+  "name": "cf-gemini",
+  "version": "1.0.0",
+  "description": "Proxy for Google Gemini API with OpenAI style",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "preview": "wrangler preview"
+  },
+  "keywords": [
+    "cloudflare",
+    "worker",
+    "gemini",
+    "api",
+    "proxy"
+  ],
+  "author": "wangkexiong",
+  "license": "MIT",
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250919.0",
+    "typescript": "^5.9.2",
+    "wrangler": "^4.38.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
