@@ -3,6 +3,7 @@ import { handleModels } from "./handlers/models";
 import { handleEmbeddings } from "./handlers/embeddings";
 import { handleCompletions } from "./handlers/completions";
 import { HttpError } from "./utils/errors";
+import { ApiKeyManager } from "./utils/apiKeyManager";
 
 export interface Env {
   API_KEY?: string;
@@ -27,7 +28,9 @@ export default {
 
     try {
       const auth = request.headers.get("Authorization");
-      const apiKey = auth?.split(" ")[1];
+      const apiKeyFromHeader = auth?.split(" ")[1];
+      const apiKeyManager = new ApiKeyManager(apiKeyFromHeader ?? env.API_KEY);
+
       const assert = (success: boolean): void => {
         if (!success) {
           throw new HttpError("The specified HTTP method is not allowed for the requested resource", 400);
@@ -39,15 +42,15 @@ export default {
       switch (true) {
         case pathname.endsWith("/chat/completions"):
           assert(request.method === "POST");
-          return handleCompletions(await request.json(), apiKey)
+          return handleCompletions(await request.json(), apiKeyManager)
             .catch(errHandler);
         case pathname.endsWith("/embeddings"):
           assert(request.method === "POST");
-          return handleEmbeddings(await request.json(), apiKey)
+          return handleEmbeddings(await request.json(), apiKeyManager)
             .catch(errHandler);
         case pathname.endsWith("/models"):
           assert(request.method === "GET");
-          return handleModels(apiKey)
+          return handleModels(apiKeyManager)
             .catch(errHandler);
         default:
           throw new HttpError("404 Not Found", 404);

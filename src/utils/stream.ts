@@ -7,25 +7,25 @@ const sseline = (obj: any): string => {
   return "data: " + JSON.stringify(obj) + delimiter;
 };
 
-export function parseStream(this: any, chunk: string, controller: any): void {
-  this.buffer += chunk;
+export function parseStream(chunk: string, controller: any, context: any): void {
+  context.buffer += chunk;
   do {
-    const match = this.buffer.match(responseLineRE);
+    const match = context.buffer.match(responseLineRE);
     if (!match) { break; }
     controller.enqueue(match[1]);
-    this.buffer = this.buffer.substring(match[0].length);
+    context.buffer = context.buffer.substring(match[0].length);
   } while (true); // eslint-disable-line no-constant-condition
 }
 
-export function parseStreamFlush(this: any, controller: any): void {
-  if (this.buffer) {
-    console.error("Invalid data:", this.buffer);
-    controller.enqueue(this.buffer);
-    this.shared.is_buffers_rest = true;
+export function parseStreamFlush(controller: any, context: any): void {
+  if (context.buffer) {
+    console.error("Invalid data:", context.buffer);
+    controller.enqueue(context.buffer);
+    context.shared.is_buffers_rest = true;
   }
 }
 
-export function toOpenAiStream(this: any, line: string, controller: any): void {
+export function toOpenAiStream(line: string, controller: any, context: any): void {
   let data: any;
   try {
     data = JSON.parse(line);
@@ -34,18 +34,18 @@ export function toOpenAiStream(this: any, line: string, controller: any): void {
     }
   } catch (err: any) {
     console.error("Error parsing response:", err);
-    if (!this.shared.is_buffers_rest) { line += delimiter; }
+    if (!context.shared.is_buffers_rest) { line += delimiter; }
     controller.enqueue(line); // output as is
     return;
   }
   const obj: any = {
-    id: this.id,
-    choices: data.candidates.map(this.transformCandidatesDelta),
-    model: data.modelVersion ?? this.model,
+    id: context.id,
+    choices: data.candidates.map(context.transformCandidatesDelta),
+    model: data.modelVersion ?? context.model,
     object: "chat.completion.chunk",
-    usage: data.usageMetadata && this.streamIncludeUsage ? null : undefined,
+    usage: data.usageMetadata && context.streamIncludeUsage ? null : undefined,
   };
-  if (this.checkPromptBlock(obj.choices, data.promptFeedback, "delta")) {
+  if (context.checkPromptBlock(obj.choices, data.promptFeedback, "delta")) {
     controller.enqueue(sseline(obj));
     return;
   }
@@ -54,7 +54,7 @@ export function toOpenAiStream(this: any, line: string, controller: any): void {
   cand.index = cand.index || 0; // absent in new -002 models response
   const finish_reason = cand.finish_reason;
   cand.finish_reason = null;
-  if (!this.last[cand.index]) { // first
+  if (!context.last[cand.index]) { // first
     controller.enqueue(sseline({
       ...obj,
       choices: [{ ...cand, tool_calls: undefined, delta: { role: "assistant", content: "" } }],
@@ -65,16 +65,16 @@ export function toOpenAiStream(this: any, line: string, controller: any): void {
     controller.enqueue(sseline(obj));
   }
   cand.finish_reason = finish_reason;
-  if (data.usageMetadata && this.streamIncludeUsage) {
-    obj.usage = this.transformUsage(data.usageMetadata);
+  if (data.usageMetadata && context.streamIncludeUsage) {
+    obj.usage = context.transformUsage(data.usageMetadata);
   }
   cand.delta = {};
-  this.last[cand.index] = obj;
+  context.last[cand.index] = obj;
 }
 
-export function toOpenAiStreamFlush(this: any, controller: any): void {
-  if (this.last.length > 0) {
-    for (const obj of this.last) {
+export function toOpenAiStreamFlush(controller: any, context: any): void {
+  if (context.last.length > 0) {
+    for (const obj of context.last) {
       controller.enqueue(sseline(obj));
     }
     controller.enqueue("data: [DONE]" + delimiter);

@@ -3,6 +3,8 @@ import { makeHeaders } from "../utils/helpers";
 import { fixCors } from "../utils/cors";
 import { HttpError } from "../utils/errors";
 import { transformModelForEmbeddings, transformInputForEmbeddings } from "../utils/transformers";
+import { ApiKeyManager } from "../utils/apiKeyManager";
+import { fetchWithRetry } from "../utils/fetchWithRetry";
 
 interface EmbeddingRequest {
   model: string;
@@ -14,21 +16,24 @@ interface EmbeddingResponse {
   values: number[];
 }
 
-export async function handleEmbeddings (req: EmbeddingRequest, apiKey: string | undefined): Promise<Response> {
+export async function handleEmbeddings(req: EmbeddingRequest, apiKeyManager: ApiKeyManager): Promise<Response> {
   const model = transformModelForEmbeddings(req.model);
   const input = transformInputForEmbeddings(req.input);
-
-  const response = await fetch(`${BASE_URL}/${API_VERSION}/${model}:batchEmbedContents`, {
-    method: "POST",
-    headers: makeHeaders(apiKey, { "Content-Type": "application/json" }),
-    body: JSON.stringify({
-      "requests": input.map(text => ({
-        model,
-        content: { parts: { text } },
-        outputDimensionality: req.dimensions,
-      }))
-    })
+  const url = `${BASE_URL}/${API_VERSION}/${model}:batchEmbedContents`;
+  const bodyContent = JSON.stringify({
+    "requests": input.map(text => ({
+      model,
+      content: { parts: { text } },
+      outputDimensionality: req.dimensions,
+    }))
   });
+
+  const response = await fetchWithRetry(apiKeyManager, url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: bodyContent,
+  });
+
   let body: string | ReadableStream<any> | null = response.body;
   if (response.ok) {
     const { embeddings } = JSON.parse(await response.text()) as { embeddings: EmbeddingResponse[] };

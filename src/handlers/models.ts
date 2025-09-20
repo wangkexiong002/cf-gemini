@@ -1,15 +1,21 @@
 import { BASE_URL, API_VERSION } from "../config/constants";
 import { makeHeaders } from "../utils/helpers";
 import { fixCors } from "../utils/cors";
+import { ApiKeyManager } from "../utils/apiKeyManager";
+import { HttpError } from "../utils/errors";
+import { fetchWithRetry } from "../utils/fetchWithRetry";
 
 interface Model {
   name: string;
 }
 
-export async function handleModels (apiKey: string | undefined): Promise<Response> {
-  const response = await fetch(`${BASE_URL}/${API_VERSION}/models`, {
-    headers: makeHeaders(apiKey),
+export async function handleModels(apiKeyManager: ApiKeyManager): Promise<Response> {
+  const url = `${BASE_URL}/${API_VERSION}/models`;
+
+  const response = await fetchWithRetry(apiKeyManager, url, {
+    method: "GET",
   });
+
   let body: string | ReadableStream<any> | null = response.body;
   if (response.ok) {
     const { models } = JSON.parse(await response.text()) as { models: Model[] };
