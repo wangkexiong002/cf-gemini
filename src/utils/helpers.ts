@@ -41,3 +41,18 @@ export const parseImg = async (url: string): Promise<any> => {
     },
   };
 };
+
+/**
+ * Masks the middle part of an API key with asterisks.
+ * @param apiKey The API key to mask
+ * @returns The masked API key
+ */
+export const maskApiKey = (apiKey: string): string => {
+  if (apiKey.length <= 8) {
+    // If the key is too short, just return a masked version
+    return '****';
+  }
+  const start = apiKey.substring(0, 4);
+  const end = apiKey.substring(apiKey.length - 4);
+  return `${start}****${end}`;
+};

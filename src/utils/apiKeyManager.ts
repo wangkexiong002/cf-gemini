@@ -1,3 +1,5 @@
+import { maskApiKey } from "./helpers";
+
 interface ApiKey {
   key: string;
   status: 'available' | 'temporarily_disabled' | 'daily_disabled';
@@ -68,7 +70,7 @@ export class ApiKeyManager {
   public disableKeyTemporarily(key: string): void {
     const apiKey = this.keys.find(k => k.key === key);
     if (apiKey) {
-      console.log(`APIKeyManager: Temporarily disabling key: ${key}`);
+      console.log(`APIKeyManager: Temporarily disabling key: ${maskApiKey(key)}`);
       apiKey.status = 'temporarily_disabled';
       apiKey.disabledUntil = Date.now() + 60 * 1000; // 1 minute
     }
@@ -77,7 +79,7 @@ export class ApiKeyManager {
   public disableKeyForDay(key: string): void {
     const apiKey = this.keys.find(k => k.key === key);
     if (apiKey) {
-      console.log(`APIKeyManager: Disabling key for the day: ${key}`);
+      console.log(`APIKeyManager: Disabling key for the day: ${maskApiKey(key)}`);
       apiKey.status = 'daily_disabled';
       apiKey.disabledUntil = Date.now();
     }
