@@ -50,9 +50,8 @@ export const parseImg = async (url: string): Promise<any> => {
 export const maskApiKey = (apiKey: string): string => {
   if (apiKey.length <= 8) {
     // If the key is too short, just return a masked version
-    return '****';
+    return "*".repeat(apiKey.length);
   }
-  const start = apiKey.substring(0, 4);
-  const end = apiKey.substring(apiKey.length - 4);
-  return `${start}****${end}`;
+  const end = apiKey.substring(apiKey.length - 8);
+  return "*".repeat(apiKey.length - 8) + `${end} (${apiKey.length})`;
 };
