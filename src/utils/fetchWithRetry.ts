@@ -1,6 +1,6 @@
 import { ApiKeyManager } from "./apiKeyManager";
 import { HttpError } from "./errors";
-import { maskApiKey } from "./helpers";
+import { makeHeaders, maskApiKey } from "./helpers";
 
 export async function fetchWithRetry(
   apiKeyManager: ApiKeyManager,
@@ -26,10 +26,10 @@ export async function fetchWithRetry(
     try {
       const headers = {
         ...options.headers,
-        'Authorization': `Bearer ${apiKey}`,
+        ...makeHeaders(apiKey),
       };
       const currentOptions = { ...options, headers };
-      console.log(`fetchWithRetry: Sending request to ${url}`);
+      console.log(`fetchWithRetry: Sending request to ${url} with options: ${JSON.stringify(currentOptions)}`);
       const response = await fetch(url, currentOptions);
       console.log(`fetchWithRetry: Received response with status: ${response.status}`);
 
