@@ -19,7 +19,6 @@ export function parseStream(chunk: string, controller: any, context: any): void 
 
 export function parseStreamFlush(controller: any, context: any): void {
   if (context.buffer) {
-    console.error("Invalid data:", context.buffer);
     controller.enqueue(context.buffer);
     context.shared.is_buffers_rest = true;
   }
@@ -33,7 +32,6 @@ export function toOpenAiStream(line: string, controller: any, context: any): voi
       throw new Error("Invalid completion chunk object");
     }
   } catch (err: any) {
-    console.error("Error parsing response:", err);
     if (!context.shared.is_buffers_rest) { line += delimiter; }
     controller.enqueue(line); // output as is
     return;

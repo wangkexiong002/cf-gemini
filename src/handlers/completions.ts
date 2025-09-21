@@ -29,52 +29,39 @@ interface ChatCompletionRequest {
 }
 
 export async function handleCompletions(req: ChatCompletionRequest, apiKeyManager: ApiKeyManager): Promise<Response> {
-  console.log("handleCompletions: Starting completion request");
   let model = DEFAULT_MODEL;
   const modelStr = req.model || "";
-  console.log(`handleCompletions: Requested model: ${modelStr}`);
   switch (true) {
     case typeof req.model !== "string":
-      console.log("handleCompletions: Model is not a string, using default model");
       break;
     case modelStr.startsWith("models/"):
       model = modelStr.substring(7);
-      console.log(`handleCompletions: Model starts with 'models/', using: ${model}`);
       break;
     case modelStr.startsWith("gemini-"):
     case modelStr.startsWith("gemma-"):
     case modelStr.startsWith("learnlm-"):
       model = modelStr;
-      console.log(`handleCompletions: Using specified model: ${model}`);
   }
   let body = await transformRequest(req);
-  console.log("handleCompletions: Request body transformed");
   switch (true) {
     case model.endsWith(":search"):
       model = model.substring(0, model.length - 7);
-      console.log(`handleCompletions: Model ends with ':search', using: ${model}`);
       // eslint-disable-next-line no-fallthrough
-    case req.model.endsWith("-search-preview"):
+    case req.model?.endsWith("-search-preview"):
       body.tools = body.tools || [];
-      body.tools.push({googleSearch: {}});
-      console.log("handleCompletions: Added Google Search tool to request");
+      (body.tools as any[]).push({googleSearch: {}});
   }
   const TASK = req.stream ? "streamGenerateContent" : "generateContent";
-  console.log(`handleCompletions: Task determined as: ${TASK}`);
   let url = `${BASE_URL}/${API_VERSION}/models/${model}:${TASK}`;
   if (req.stream) {
     url += "?alt=sse";
-    console.log("handleCompletions: Streaming enabled, added ?alt=sse to URL");
   }
-  console.log(`handleCompletions: Final URL: ${url}`);
 
-  console.log("handleCompletions: Calling fetchWithRetry");
   const response = await fetchWithRetry(apiKeyManager, url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  console.log(`handleCompletions: fetchWithRetry completed with status: ${response.status}`);
 
   let responseBody: BodyInit | null = response.body;
   if (response.ok) {
@@ -115,7 +102,6 @@ export async function handleCompletions(req: ChatCompletionRequest, apiKeyManage
         }
         responseBody = JSON.stringify(processCompletionsResponse(parsedJson, model, id));
       } catch (err) {
-        console.error("Error parsing response:", err);
         return new Response(responseText, fixCors(response)); // output as is
       }
     }

@@ -107,10 +107,10 @@ export const adjustSchema = (schema: any): void => {
   return adjustProps(schema);
 };
 
-export const transformConfig = (req) => {
-  let cfg = {};
+export const transformConfig = (req: ChatCompletionRequest) => {
+  let cfg: any = {};
   for (let key in req) {
-    const matchedKey = fieldsMap[key];
+    const matchedKey = fieldsMap[key as keyof typeof fieldsMap];
     if (matchedKey) {
       cfg[matchedKey] = req[key];
     }
@@ -138,7 +138,7 @@ export const transformConfig = (req) => {
   return cfg;
 };
 
-export const transformFnResponse = ({ content, tool_call_id }, parts) => {
+export const transformFnResponse = ({ content, tool_call_id }: { content: string, tool_call_id: string }, parts: any) => {
   if (!parts.calls) {
     throw new HttpError("No function calls found in the previous message", 400);
   }
@@ -146,7 +146,6 @@ export const transformFnResponse = ({ content, tool_call_id }, parts) => {
   try {
     response = JSON.parse(content);
   } catch (err) {
-    console.error("Error parsing function response content:", err);
     throw new HttpError("Invalid function response: " + content, 400);
   }
   if (typeof response !== "object" || response === null || Array.isArray(response)) {
@@ -171,9 +170,9 @@ export const transformFnResponse = ({ content, tool_call_id }, parts) => {
   };
 };
 
-export const transformFnCalls = ({ tool_calls }) => {
-  const calls = {};
-  const parts = tool_calls.map(({ function: { arguments: argstr, name }, id, type }, i) => {
+export const transformFnCalls = ({ tool_calls }: { tool_calls: any[] }) => {
+  const calls: any = {};
+  const parts = tool_calls.map(({ function: { arguments: argstr, name }, id, type }: any, i: number) => {
     if (type !== "function") {
       throw new HttpError(`Unsupported tool_call type: "${type}"`, 400);
     }
@@ -181,7 +180,6 @@ export const transformFnCalls = ({ tool_calls }) => {
     try {
       args = JSON.parse(argstr);
     } catch (err) {
-      console.error("Error parsing function arguments:", err);
       throw new HttpError("Invalid function arguments: " + argstr, 400);
     }
     calls[id] = {i, name};
@@ -193,11 +191,11 @@ export const transformFnCalls = ({ tool_calls }) => {
       }
     };
   });
-  parts.calls = calls;
+  (parts as any).calls = calls;
   return parts;
 };
 
-export const transformMsg = async ({ content }) => {
+export const transformMsg = async ({ content }: { content: any }) => {
   const parts = [];
   if (!Array.isArray(content)) {
     // system, user: string
@@ -235,7 +233,7 @@ export const transformMsg = async ({ content }) => {
   return parts;
 };
 
-export const transformMessages = async (messages) => {
+export const transformMessages = async (messages: Message[]) => {
   if (!messages) { return; }
   const contents = [];
   let system_instruction;
@@ -246,16 +244,17 @@ export const transformMessages = async (messages) => {
         continue;
       case "tool":
         // eslint-disable-next-line no-case-declarations
-        let { role, parts } = contents[contents.length - 1] ?? {};
+        let { role, parts } = contents[contents.length - 1] ?? {} as any;
         if (role !== "function") {
           const calls = parts?.calls;
-          parts = []; parts.calls = calls;
+          parts = [];
+          (parts as any).calls = calls;
           contents.push({
             role: "function", // ignored
             parts
           });
         }
-        transformFnResponse(item, parts);
+        transformFnResponse(item as any, parts);
         continue;
       case "assistant":
         item.role = "model";
@@ -267,18 +266,18 @@ export const transformMessages = async (messages) => {
     }
     contents.push({
       role: item.role,
-      parts: item.tool_calls ? transformFnCalls(item) : await transformMsg(item)
+      parts: item.tool_calls ? transformFnCalls(item as any) : await transformMsg(item)
     });
   }
   if (system_instruction) {
     if (!contents[0]?.parts.some(part => part.text)) {
-      contents.unshift({ role: "user", parts: { text: " " } });
+      contents.unshift({ role: "user", parts: { text: " " } as any });
     }
   }
   return { system_instruction, contents };
 };
 
-export const transformTools = (req) => {
+export const transformTools = (req: ChatCompletionRequest) => {
   let tools, tool_config;
   if (req.tools) {
     const funcs = req.tools.filter(tool => tool.type === "function");
@@ -299,15 +298,15 @@ export const transformTools = (req) => {
   return { tools, tool_config };
 };
 
-export const transformRequest = async (req) => ({
+export const transformRequest = async (req: ChatCompletionRequest) => ({
   ...await transformMessages(req.messages),
   safetySettings,
   generationConfig: transformConfig(req),
   ...transformTools(req),
 });
 
-export const transformCandidates = (key, cand) => {
-  const message = { role: "assistant", content: [] };
+export const transformCandidates = (key: string, cand: Candidate) => {
+  const message: any = { role: "assistant", content: [] };
   for (const part of cand.content?.parts ?? []) {
     if (part.functionCall) {
       const fc = part.functionCall;
@@ -329,27 +328,25 @@ export const transformCandidates = (key, cand) => {
     index: cand.index || 0, // 0-index is absent in new -002 models response
     [key]: message,
     logprobs: null,
-    finish_reason: message.tool_calls ? "tool_calls" : reasonsMap[cand.finishReason] || cand.finishReason,
+    finish_reason: message.tool_calls ? "tool_calls" : reasonsMap[cand.finishReason as keyof typeof reasonsMap] || cand.finishReason,
   };
 };
 
 export const transformCandidatesMessage = transformCandidates.bind(null, "message");
 export const transformCandidatesDelta = transformCandidates.bind(null, "delta");
 
-export const transformUsage = (data) => ({
+export const transformUsage = (data: UsageMetadata) => ({
   completion_tokens: data.candidatesTokenCount,
   prompt_tokens: data.promptTokenCount,
   total_tokens: data.totalTokenCount
 });
 
-export const checkPromptBlock = (choices, promptFeedback, key) => {
+export const checkPromptBlock = (choices: any[], promptFeedback: PromptFeedback, key: string) => {
   if (choices.length) { return; }
   if (promptFeedback?.blockReason) {
-    console.log("Prompt block reason:", promptFeedback.blockReason);
     if (promptFeedback.blockReason === "SAFETY") {
       promptFeedback.safetyRatings
-        .filter(r => r.blocked)
-        .forEach(r => console.log(r));
+        ?.filter(r => r.blocked)
     }
     choices.push({
       index: 0,
@@ -360,7 +357,7 @@ export const checkPromptBlock = (choices, promptFeedback, key) => {
   return true;
 };
 
-export const processCompletionsResponse = (data, model, id) => {
+export const processCompletionsResponse = (data: any, model: string, id: string) => {
   const obj = {
     id,
     choices: data.candidates.map(transformCandidatesMessage),
@@ -375,7 +372,7 @@ export const processCompletionsResponse = (data, model, id) => {
   return JSON.stringify(obj);
 };
 
-export const transformModelForEmbeddings = (model) => {
+export const transformModelForEmbeddings = (model: string) => {
   if (typeof model !== "string") {
     throw new HttpError("model is not specified", 400);
   }
@@ -391,7 +388,7 @@ export const transformModelForEmbeddings = (model) => {
   return modelName;
 };
 
-export const transformInputForEmbeddings = (input) => {
+export const transformInputForEmbeddings = (input: string | string[]) => {
   if (!Array.isArray(input)) {
     return [input];
   }
