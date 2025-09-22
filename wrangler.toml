@@ -9,5 +9,4 @@ compatibility_flags = ["nodejs_compat"]
 
 [[kv_namespaces]]
 binding = "API_KEY_KV"
-id = "a555c815-8344-498a-a731-4a6312de80a1"
-preview_id = "a555c815-8344-498a-a731-4a6312de80a1"
+id = "ab18d5593fa64f7db10a608a2be01bf4"
