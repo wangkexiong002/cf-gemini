@@ -7,29 +7,44 @@ interface ApiKey {
 }
 
 export class ApiKeyManager {
-  private keys: ApiKey[];
+  private keys: string[];
   private currentIndex: number = 0;
+  private kv: KVNamespace;
 
-  constructor(apiKeyString: string | undefined) {
+  constructor(apiKeyString: string | undefined, kv: KVNamespace) {
     if (!apiKeyString) {
       this.keys = [];
-      return;
+    } else {
+      this.keys = apiKeyString.split(',').map(key => key.trim());
     }
-    this.keys = apiKeyString.split(',').map(key => ({
-      key: key.trim(),
-      status: 'available',
-    }));
+    this.kv = kv;
   }
 
-  public getAvailableKey(): string | null {
+  private async getKey(key: string): Promise<ApiKey> {
+    const storedKey = await this.kv.get(key);
+    if (storedKey) {
+      return JSON.parse(storedKey);
+    }
+    return {
+      key,
+      status: 'available',
+    };
+  }
+
+  private async saveKey(apiKey: ApiKey): Promise<void> {
+    await this.kv.put(apiKey.key, JSON.stringify(apiKey));
+  }
+
+  public async getAvailableKey(): Promise<string | null> {
     if (this.keys.length === 0) {
       return null;
     }
 
     const initialIndex = this.currentIndex;
     do {
-      const apiKey = this.keys[this.currentIndex];
+      const key = this.keys[this.currentIndex];
       this.currentIndex = (this.currentIndex + 1) % this.keys.length;
+      const apiKey = await this.getKey(key);
       console.log(`apiKeyManager - ${maskApiKey(apiKey.key)}: ${apiKey.status}`);
 
       if (apiKey.status === 'available') {
@@ -41,17 +56,18 @@ export class ApiKeyManager {
         if (isExpired) {
           apiKey.status = 'available';
           apiKey.disabledUntil = undefined;
+          await this.saveKey(apiKey);
           return apiKey.key;
         }
       }
 
       if (apiKey.status === 'daily_disabled' && apiKey.disabledUntil) {
-        // Check if the current date in PT is past the disabled date in PT.
         console.log(`apiKeyManager - block until next day: ${apiKey.disabledUntil}`);
         const isExpired = Date.now() > apiKey.disabledUntil;
         if (isExpired) {
           apiKey.status = 'available';
           apiKey.disabledUntil = undefined;
+          await this.saveKey(apiKey);
           return apiKey.key;
         }
       }
@@ -60,24 +76,22 @@ export class ApiKeyManager {
     return null;
   }
 
-  public disableKeyTemporarily(key: string): void {
-    const apiKey = this.keys.find(k => k.key === key);
-    if (apiKey) {
-      apiKey.status = 'temporarily_disabled';
-      apiKey.disabledUntil = Date.now() + 60 * 1000; // 1 minute
-    }
+  public async disableKeyTemporarily(key: string, duration: number = 1): Promise<void> {
+    const apiKey = await this.getKey(key);
+    apiKey.status = 'temporarily_disabled';
+    apiKey.disabledUntil = Date.now() + duration * 60 * 1000;
+    await this.saveKey(apiKey);
   }
 
-  public disableKeyForDay(key: string): void {
-    const apiKey = this.keys.find(k => k.key === key);
-    if (apiKey) {
-      const timestampUTC = Date.now();
-      const timestampNextMidnightUTC = timestampUTC - (timestampUTC % 86400000) + 86400000;
-      const timestampNextMidnightPT = timestampNextMidnightUTC - 3600000 * this.getUTCOffset("America/Los_Angeles");
+  public async disableKeyForDay(key: string): Promise<void> {
+    const apiKey = await this.getKey(key);
+    const timestampUTC = Date.now();
+    const timestampNextMidnightUTC = timestampUTC - (timestampUTC % 86400000) + 86400000;
+    const timestampNextMidnightPT = timestampNextMidnightUTC - 3600000 * this.getUTCOffset("America/Los_Angeles");
 
-      apiKey.status = 'daily_disabled';
-      apiKey.disabledUntil = timestampNextMidnightPT;
-    }
+    apiKey.status = 'daily_disabled';
+    apiKey.disabledUntil = timestampNextMidnightPT;
+    await this.saveKey(apiKey);
   }
 
   public getTotalKeys(): number {

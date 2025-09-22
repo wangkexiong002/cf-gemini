@@ -8,12 +8,15 @@ export async function fetchWithRetry(
   options: RequestInit
 ): Promise<Response> {
   const maxRetries = apiKeyManager.getTotalKeys();
-  let attempt = 0;
+  if (maxRetries === 0) {
+    throw new HttpError("No key found in Authorization header.", 500);
+  }
 
+  let attempt = 0;
   while (attempt < maxRetries) {
-    const apiKey = apiKeyManager.getAvailableKey();
+    const apiKey = await apiKeyManager.getAvailableKey();
     if (!apiKey) {
-      throw new HttpError("No available API keys", 500);
+      throw new HttpError("No key available now while some of them are still in block", 500);
     }
 
     // Hide the middle part of the API key for logging
@@ -29,23 +32,31 @@ export async function fetchWithRetry(
       console.log(`fetchWithRetry - recevied response ${response.status} from ${url} with ${maskedApiKey}`);
 
       if (response.status >= 500) {
-        apiKeyManager.disableKeyTemporarily(apiKey);
+        await apiKeyManager.disableKeyTemporarily(apiKey);
         attempt++;
         continue;
       }
 
       if (response.status === 429) {
-        apiKeyManager.disableKeyForDay(apiKey);
+        await apiKeyManager.disableKeyForDay(apiKey);
         attempt++;
         continue;
       }
 
-      return response;
+      if (response.status === 200) {
+        return response;
+      } else {
+        // response with 400 and 406 indicates keys not enabled or insufficient funds
+        // this may be fixed that cannot control here, say user recharges or adds that key offline
+        await apiKeyManager.disableKeyTemporarily(apiKey, 5);
+        attempt++;
+        continue;
+      }
     } catch (error) {
-      apiKeyManager.disableKeyTemporarily(apiKey);
+      await apiKeyManager.disableKeyTemporarily(apiKey);
       attempt++;
     }
   }
 
-  throw new HttpError("All API keys failed", 500);
+  throw new HttpError("All keys are tried and in block", 500);
 }

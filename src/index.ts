@@ -7,6 +7,7 @@ import { ApiKeyManager } from "./utils/apiKeyManager";
 
 export interface Env {
   API_KEY?: string;
+  API_KEY_KV: KVNamespace;
 }
 
 export default {
@@ -28,7 +29,7 @@ export default {
     try {
       const auth = request.headers.get("Authorization");
       const apiKeyFromHeader = auth?.split(" ")[1];
-      const apiKeyManager = new ApiKeyManager(apiKeyFromHeader ?? env.API_KEY);
+      const apiKeyManager = new ApiKeyManager(apiKeyFromHeader ?? env.API_KEY, env.API_KEY_KV);
 
       const assert = (success: boolean): void => {
         if (!success) {

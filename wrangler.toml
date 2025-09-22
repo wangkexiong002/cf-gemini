@@ -6,3 +6,8 @@ compatibility_flags = ["nodejs_compat"]
 [vars]
 # Environment variables can be added here
 # API_KEY = "your-api-key"
+
+[[kv_namespaces]]
+binding = "API_KEY_KV"
+id = "a555c815-8344-498a-a731-4a6312de80a1"
+preview_id = "a555c815-8344-498a-a731-4a6312de80a1"
