@@ -30,7 +30,7 @@ export class ApiKeyManager {
     do {
       const apiKey = this.keys[this.currentIndex];
       this.currentIndex = (this.currentIndex + 1) % this.keys.length;
-      console.log(`${maskApiKey(apiKey.key)}: ${apiKey.status}`);
+      console.log(`apiKeyManager - ${maskApiKey(apiKey.key)}: ${apiKey.status}`);
 
       if (apiKey.status === 'available') {
         return apiKey.key;
@@ -47,26 +47,14 @@ export class ApiKeyManager {
 
       if (apiKey.status === 'daily_disabled' && apiKey.disabledUntil) {
         // Check if the current date in PT is past the disabled date in PT.
-        const disabledDateStr = new Date(apiKey.disabledUntil).toLocaleDateString('en-CA', {timeZone: 'America/Los_Angeles'});
-        
-
-
-
-
-
-
-
-/*
-        const disabledDateStr = new Date(apiKey.disabledUntil).toLocaleDateString('en-CA', {timeZone: 'America/Los_Angeles'});
-        const currentDateStr = new Date().toLocaleDateString('en-CA', {timeZone: 'America/Los_Angeles'});
-        const isExpired = currentDateStr > disabledDateStr;
+        console.log(`apiKeyManager - block until next day: ${apiKey.disabledUntil}`);
+        const isExpired = Date.now() > apiKey.disabledUntil;
         if (isExpired) {
-            apiKey.status = 'available';
-            apiKey.disabledUntil = undefined;
-            return apiKey.key;
+          apiKey.status = 'available';
+          apiKey.disabledUntil = undefined;
+          return apiKey.key;
         }
       }
-*/
     } while (this.currentIndex !== initialIndex);
 
     return null;
@@ -83,12 +71,34 @@ export class ApiKeyManager {
   public disableKeyForDay(key: string): void {
     const apiKey = this.keys.find(k => k.key === key);
     if (apiKey) {
+      const timestampUTC = Date.now();
+      const timestampNextMidnightUTC = timestampUTC - (timestampUTC % 86400000) + 86400000;
+      const timestampNextMidnightPT = timestampNextMidnightUTC - 3600000 * this.getUTCOffset("America/Los_Angeles");
+
       apiKey.status = 'daily_disabled';
-      apiKey.disabledUntil = Date.now();
+      apiKey.disabledUntil = timestampNextMidnightPT;
     }
   }
 
   public getTotalKeys(): number {
     return this.keys.length;
+  }
+
+  private getUTCOffset(timeZone: string = "UTC", ts: number = Date.now()): number {
+    const fmt = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      timeZoneName: "shortOffset"
+    });
+
+    const parts = fmt.formatToParts(new Date(ts));
+    const tzPart = parts.find(p => p.type === "timeZoneName")?.value || "GMT+0";
+
+    const match = tzPart.match(/GMT([+-]\d+)(?::(\d+))?/);
+    if (!match) return 0;
+
+    const hours = Number(match[1]);
+    const minutes = match[2] ? Number(match[2]) : 0;
+
+    return hours + minutes / 60;
   }
 }

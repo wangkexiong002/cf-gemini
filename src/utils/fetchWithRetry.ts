@@ -26,7 +26,7 @@ export async function fetchWithRetry(
       };
       const currentOptions = { ...options, headers };
       const response = await fetch(url, currentOptions);
-      console.log(`recevied response ${response.status} from ${url} with ${maskedApiKey}`);
+      console.log(`fetchWithRetry - recevied response ${response.status} from ${url} with ${maskedApiKey}`);
 
       if (response.status >= 500) {
         apiKeyManager.disableKeyTemporarily(apiKey);
