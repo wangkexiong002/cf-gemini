@@ -86,8 +86,8 @@ export class ApiKeyManager {
   public async disableKeyForDay(key: string): Promise<void> {
     const apiKey = await this.getKey(key);
     const timestampUTC = Date.now();
-    const timestampNextMidnightUTC = timestampUTC - (timestampUTC % 86400000) + 86400000;
-    const timestampNextMidnightPT = timestampNextMidnightUTC - 3600000 * this.getUTCOffset("America/Los_Angeles");
+    const timestampPTOffset = timestampUTC + 3600 * 1000 * this.getUTCOffset("America/Los_Angeles");
+    const timestampNextMidnightPT = timestampUTC - (timestampPTOffset % 86400000) + 86400000;
 
     apiKey.status = 'daily_disabled';
     apiKey.disabledUntil = timestampNextMidnightPT;
