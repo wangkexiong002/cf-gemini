@@ -5,13 +5,8 @@ import { handleCompletions } from "./handlers/completions";
 import { HttpError } from "./utils/errors";
 import { ApiKeyManager } from "./utils/apiKeyManager";
 
-export interface Env {
-  API_KEY?: string;
-  API_KEY_KV: KVNamespace;
-}
-
 export default {
-  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  async fetch(request: Request): Promise<Response> {
     if (request.method === "OPTIONS") {
       return handleOPTIONS();
     }
@@ -29,7 +24,7 @@ export default {
     try {
       const auth = request.headers.get("Authorization");
       const apiKeyFromHeader = auth?.split(" ")[1];
-      const apiKeyManager = new ApiKeyManager(apiKeyFromHeader ?? env.API_KEY, env.API_KEY_KV);
+      const apiKeyManager = new ApiKeyManager(apiKeyFromHeader);
 
       const assert = (success: boolean): void => {
         if (!success) {
@@ -59,4 +54,4 @@ export default {
       return errHandler(err);
     }
   }
-} satisfies ExportedHandler<Env>;
+};
