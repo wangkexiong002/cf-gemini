@@ -7,38 +7,24 @@ export interface UniversalKV {
   delete(key: string): Promise<void>;
 }
 
-const isCloudflare =
-  typeof globalThis !== "undefined" &&
-  typeof (globalThis as any).caches !== "undefined" &&
-  typeof (globalThis as any).process === "undefined";
-
-const isVercel =
-  typeof (globalThis as any).EdgeRuntime !== "undefined" ||
-  (typeof process !== "undefined" && process?.env?.VERCEL === "1");
-
-function createCloudflareKV(env: Record<string, any>): UniversalKV {
-  const kvBinding =
-    env.API_KEY_KV ||
-    Object.values(env).find((v) => v && typeof v.get === "function");
-
-  if (!kvBinding) throw new Error("[UniversalKV] Cloudflare KV binding not found");
-
-  const cfKV = kvBinding as KVNamespace;
+export function useCloudflareKV(kv: KVNamespace<string> | undefined): UniversalKV {
+  const invalidKV = !kv || typeof kv.get !== "function";
+  if (invalidKV) { throw new Error("[UniversalKV] Cloudflare KV binding not found"); }
 
   return {
     async get(key) {
-      return await cfKV.get(key); // string | null
+      return await kv.get(key); // string | null
     },
     async set(key, value, opts) {
-      await cfKV.put(key, value, opts);
+      await kv.put(key, value, opts);
     },
     async delete(key) {
-      await cfKV.delete(key);
+      await kv.delete(key);
     },
   };
 }
 
-function createVercelKV(vercelKV: VercelKV): UniversalKV {
+export function useVercelKV(vercelKV: VercelKV): UniversalKV {
   return {
     async get(key) {
       const val = await vercelKV.get<string>(key);
@@ -53,7 +39,7 @@ function createVercelKV(vercelKV: VercelKV): UniversalKV {
   };
 }
 
-function createLocalKV(): UniversalKV {
+export function useLocalKV(): UniversalKV {
   const store = new Map<string, string>();
   console.warn("[UniversalKV] Using in-memory KV for local dev");
 
@@ -69,17 +55,3 @@ function createLocalKV(): UniversalKV {
     },
   };
 }
-
-// ✅ 自动检测运行环境并实例化
-let kv: UniversalKV;
-
-if (isCloudflare) {
-  kv = createCloudflareKV((globalThis as any).ENV || globalThis);
-} else if (isVercel) {
-  const { kv: vercelKV } = await import("@vercel/kv");
-  kv = createVercelKV(vercelKV);
-} else {
-  kv = createLocalKV();
-}
-
-export { kv };

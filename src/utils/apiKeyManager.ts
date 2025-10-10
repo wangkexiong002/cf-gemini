@@ -1,5 +1,5 @@
+import { UniversalKV } from "../wrapper/kv";
 import { maskApiKey } from "./helpers";
-import { kv } from "../wrapper/kv";
 
 interface ApiKey {
   key: string;
@@ -9,18 +9,20 @@ interface ApiKey {
 
 export class ApiKeyManager {
   private keys: string[];
+  private kv: UniversalKV;
   private currentIndex: number = 0;
 
-  constructor(apiKeyString: string | undefined) {
+  constructor(apiKeyString: string | undefined, kv: UniversalKV) {
     if (!apiKeyString) {
       this.keys = [];
     } else {
       this.keys = apiKeyString.split(',').map(key => key.trim());
     }
+    this.kv = kv;
   }
 
   private async getKey(key: string): Promise<ApiKey> {
-    const storedKey = await kv.get(key);
+    const storedKey = await this.kv.get(key);
     if (storedKey) {
       return JSON.parse(storedKey);
     }
@@ -31,7 +33,7 @@ export class ApiKeyManager {
   }
 
   private async saveKey(apiKey: ApiKey): Promise<void> {
-    await kv.set(apiKey.key, JSON.stringify(apiKey));
+    await this.kv.set(apiKey.key, JSON.stringify(apiKey));
   }
 
   public async getAvailableKey(): Promise<string | null> {

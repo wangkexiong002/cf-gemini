@@ -1,6 +1,10 @@
-import worker from "../src/index";
+import { kv } from "@vercel/kv"
+import { startWorker } from "../src/worker/start";
+import { useVercelKV } from "../src/wrapper/kv";
 
-export default worker.fetch;
+export default async function handler(request: Request): Promise<Response> {
+  return startWorker(request, useVercelKV(kv));
+}
 
 export const config = {
   runtime: "edge",
