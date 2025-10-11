@@ -1,9 +1,9 @@
 import { kv } from "@vercel/kv"
-import { startWorker } from "../src/worker/start";
+import { startChat } from "../src/worker/chat";
 import { useVercelKV } from "../src/wrapper/kv";
 
 export default async function handler(request: Request): Promise<Response> {
-  return startWorker(request, useVercelKV(kv));
+  return startChat(request, useVercelKV(kv));
 }
 
 export const config = {

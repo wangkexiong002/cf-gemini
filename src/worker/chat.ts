@@ -6,7 +6,7 @@ import { HttpError } from "../utils/errors";
 import { ApiKeyManager } from "../utils/apiKeyManager";
 import { UniversalKV } from "../wrapper/kv";
 
-export async function startWorker(request: Request, kv: UniversalKV): Promise<Response> {
+export async function startChat(request: Request, kv: UniversalKV): Promise<Response> {
   if (request.method === "OPTIONS") {
     return handleOPTIONS();
   }
