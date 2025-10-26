@@ -96,6 +96,7 @@ export class ApiKeyManager {
   }
 
   public getTotalKeys(): number {
+    console.log(`apiKeyManager - keys: ${this.keys}`);
     return this.keys.length;
   }
 
