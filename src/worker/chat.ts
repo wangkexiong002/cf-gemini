@@ -12,6 +12,9 @@ export async function startChat(request: Request, kv: UniversalKV): Promise<Resp
   }
 
   const errHandler = (err: Error & { status?: number }): Response => {
+    // Log the error stack trace
+    console.error("Error occurred:", err.stack || err.message);
+
     return new Response(err.message, {
       status: err.status ?? 500,
       headers: {
