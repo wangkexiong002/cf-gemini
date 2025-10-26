@@ -15,6 +15,7 @@ export async function fetchWithRetry(
   let attempt = 0;
   while (attempt < maxRetries) {
     const apiKey = await apiKeyManager.getAvailableKey();
+    console.log(`fetchWithRetry - returned ${apiKey}`);
     if (!apiKey) {
       throw new HttpError("No key available now while some of them are still in block", 500);
     }
