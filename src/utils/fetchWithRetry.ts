@@ -23,13 +23,11 @@ export async function fetchWithRetry(
     const maskedApiKey = maskApiKey(apiKey);
 
     try {
-      console.log(`fetchWithRetry - Attempting request to ${url} with ${maskedApiKey}`);
       const headers = {
         ...options.headers,
         ...makeHeaders(apiKey),
       };
       const currentOptions = { ...options, headers };
-      console.log(`fetchWithRetry - Attempting request to ${url} with ${maskedApiKey}, ${currentOptions}`);
       const response = await fetch(url, currentOptions);
       console.log(`fetchWithRetry - recevied response ${response.status} from ${url} with ${maskedApiKey}`);
 
