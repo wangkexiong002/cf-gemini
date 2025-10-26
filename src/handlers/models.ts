@@ -12,11 +12,11 @@ interface Model {
 export async function handleModels(apiKeyManager: ApiKeyManager): Promise<Response> {
   const url = `${BASE_URL}/${API_VERSION}/models`;
 
-  console.log(`handleModels - ${url}`);
   const response = await fetchWithRetry(apiKeyManager, url, {
     method: "GET",
   });
 
+  console.log(`handleModels - ${response.status} ${response.statusText}`);
   let body: string | ReadableStream<any> | null = response.body;
   if (response.ok) {
     const responseText = await response.text();
