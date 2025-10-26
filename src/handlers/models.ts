@@ -12,6 +12,7 @@ interface Model {
 export async function handleModels(apiKeyManager: ApiKeyManager): Promise<Response> {
   const url = `${BASE_URL}/${API_VERSION}/models`;
 
+  console.log(`handleModels - ${url}`);
   const response = await fetchWithRetry(apiKeyManager, url, {
     method: "GET",
   });
