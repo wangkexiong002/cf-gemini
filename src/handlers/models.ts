@@ -16,7 +16,6 @@ export async function handleModels(apiKeyManager: ApiKeyManager): Promise<Respon
     method: "GET",
   });
 
-  console.log(`handleModels - ${response.status} ${response.statusText}`);
   let body: string | ReadableStream<any> | null = response.body;
   if (response.ok) {
     const responseText = await response.text();
