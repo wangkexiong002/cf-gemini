@@ -13,7 +13,6 @@ export async function fetchWithRetry(
   }
 
   let attempt = 0;
-  console.log(`fetchWithRetry - ${url} with ${maxRetries} keys`);
   while (attempt < maxRetries) {
     const apiKey = await apiKeyManager.getAvailableKey();
     if (!apiKey) {

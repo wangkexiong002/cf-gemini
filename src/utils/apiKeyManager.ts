@@ -27,7 +27,7 @@ export class ApiKeyManager {
       return JSON.parse(storedKey);
     }
     return {
-      key,
+      key: key,
       status: 'available',
     };
   }
