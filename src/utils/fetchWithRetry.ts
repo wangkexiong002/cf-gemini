@@ -8,12 +8,12 @@ export async function fetchWithRetry(
   options: RequestInit
 ): Promise<Response> {
   const maxRetries = apiKeyManager.getTotalKeys();
-  console.log(`fetchWithRetry - ${url} with ${maxRetries} keys`);
   if (maxRetries === 0) {
     throw new HttpError("No key found in Authorization header.", 500);
   }
 
   let attempt = 0;
+  console.log(`fetchWithRetry - ${url} with ${maxRetries} keys`);
   while (attempt < maxRetries) {
     const apiKey = await apiKeyManager.getAvailableKey();
     if (!apiKey) {
